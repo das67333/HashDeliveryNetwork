@@ -11,15 +11,8 @@ struct Opts {
     port: u16,
 }
 
-fn main() {
-    // TermLogger::init(
-    //     LevelFilter::Info,
-    //     Config::default(),
-    //     TerminalMode::Stderr,
-    //     ColorChoice::Auto,
-    // )
-    // .unwrap();
-
+#[tokio::main]
+async fn main() {
     let opts = Opts::parse();
-    Server::start(opts.ip, opts.port).run().unwrap();
+    Server::start(opts.ip, opts.port).await.run().await.unwrap();
 }

@@ -1,75 +1,84 @@
-use indoc::indoc;
-use log::info;
-use std::{
-    collections::HashMap,
-    io::{Error, ErrorKind, Read, Result, Write},
-    net::{IpAddr, Shutdown, TcpListener, TcpStream},
-    sync::{Arc, Mutex},
+use std::{collections::HashMap, net::IpAddr, sync::Arc};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, Error, ErrorKind, Result},
+    net::{TcpListener, TcpStream},
+    spawn,
+    sync::Mutex,
+    task::JoinHandle,
 };
 
 pub struct Server {
     listener: TcpListener,
-    threads: Vec<std::thread::JoinHandle<()>>,
+    threads: Vec<JoinHandle<()>>,
     storage: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl Server {
-    pub fn start(ip: IpAddr, port: u16) -> Self {
+    pub async fn start(ip: IpAddr, port: u16) -> Self {
         Self {
-            listener: TcpListener::bind((ip, port)).unwrap(),
+            listener: TcpListener::bind((ip, port)).await.unwrap(),
             threads: Vec::new(),
             storage: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    pub fn run(&mut self) -> Result<()> {
-        for client in self.listener.incoming().map(|x| x.unwrap()) {
-            info!("Client connected: {}", client.peer_addr().unwrap());
+    pub async fn run(&mut self) -> Result<()> {
+        loop {
+            let (client, _addr) = self.listener.accept().await?;
             let storage_ref = self.storage.clone();
-            self.threads.push(std::thread::spawn(move || {
-                Self::client_handler(client, storage_ref)
-            }));
+            self.threads
+                .push(spawn(Self::client_handler(client, storage_ref)));
         }
-        Ok(())
     }
 
-    fn client_handler(mut client: TcpStream, mut storage: Arc<Mutex<HashMap<String, String>>>) {
-        match Self::write(
+    async fn client_handler(
+        mut client: TcpStream,
+        mut storage: Arc<Mutex<HashMap<String, String>>>,
+    ) {
+        if Self::write(
             &mut client,
-            indoc! {
-            b"{
-              \"student_name\": \"Your Name\"
-            }"},
-        ) {
-            Ok(_) => {}
-            Err(_) => {
-                let _ = client.shutdown(Shutdown::Both);
-                return;
-            }
+            b"{\
+                    \n  \"student_name\": \"das67333\"\
+                    \n}",
+        )
+        .await
+        .is_err()
+        {
+            drop(client);
+            return;
         };
         loop {
-            let message = match Self::read(&mut client) {
-                Ok(val) => val,
-                Err(_) => break,
+            let message = if let Ok(value) = Self::read(&mut client).await {
+                value
+            } else {
+                break;
             };
-            let respond = match Self::respond(&message, &mut storage) {
-                Ok(val) => val,
-                Err(_) => break,
+            let respond = if let Ok(value) = Self::respond(&message, &mut storage).await {
+                value
+            } else {
+                break;
             };
-            match Self::write(&mut client, &respond) {
-                Ok(_) => {}
-                Err(_) => break,
+            if Self::write(&mut client, &respond).await.is_err() {
+                break;
             };
         }
-        let _ = client.shutdown(Shutdown::Both);
+        drop(client);
     }
 
-    fn respond(
+    async fn respond(
         request: &[u8],
         storage: &mut Arc<Mutex<HashMap<String, String>>>,
     ) -> Result<Vec<u8>> {
         let request: HashMap<String, String> =
-            serde_json::from_str(&String::from_utf8(request.to_vec()).unwrap())?;
+            serde_json::from_str(match &String::from_utf8(request.to_vec()) {
+                Ok(val) => val,
+                Err(_) => {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "Request contains non-utf8 data",
+                    ))
+                }
+            })?;
 
         let request_type = match request.get("request_type") {
             Some(val) => val.as_str(),
@@ -101,34 +110,27 @@ impl Server {
                     }
                 };
                 {
-                    storage
-                        .lock()
-                        .unwrap()
-                        .insert(key.to_owned(), hash.to_owned());
+                    storage.lock().await.insert(key.to_owned(), hash.to_owned());
                 }
-                indoc! {
-                b"{
-                  \"response_status\": \"success\"
-                }"}
+                b"{\
+                \n  \"response_status\": \"success\"\
+                \n}"
                 .to_vec()
             }
-            "load" => match { storage.lock().unwrap().get(key) } {
+            "load" => match { storage.lock().await.get(key) } {
                 Some(hash) => format!(
-                    indoc! {
-                    "{{
-                      \"response_status\": \"success\",
-                      \"requested_key\": \"{}\",
-                      \"requested_hash\": \"{}\"
-                    }}"},
+                    "{{\
+                    \n  \"response_status\": \"success\",\
+                    \n  \"requested_key\": \"{}\",\
+                    \n  \"requested_hash\": \"{}\"\
+                    \n}}",
                     key, hash
                 )
                 .as_bytes()
                 .to_vec(),
-                None => indoc! {
-                b"{
-                  \"response_status\": \"key not found\"
-                }"
-                }
+                None => b"{\
+                        \n  \"response_status\": \"key not found\"\
+                        \n}"
                 .to_vec(),
             },
             _ => {
@@ -141,42 +143,27 @@ impl Server {
         Ok(response)
     }
 
-    fn read(stream: &mut TcpStream) -> Result<Vec<u8>> {
+    async fn read(stream: &mut TcpStream) -> Result<Vec<u8>> {
         let mut buffer = [0; 8];
-        stream.read_exact(&mut buffer)?;
+        stream.read_exact(&mut buffer).await?;
         let length = u64::from_le_bytes(buffer) as usize;
         let mut message = vec![0; length];
-        stream.read_exact(&mut message)?;
-        info!(
-            "Server received:\n{}",
-            String::from_utf8(message.clone()).unwrap()
-        );
+        stream.read_exact(&mut message).await?;
         Ok(message)
     }
 
-    fn write(stream: &mut TcpStream, message: &[u8]) -> Result<()> {
+    async fn write(stream: &mut TcpStream, message: &[u8]) -> Result<()> {
         assert_ne!(
             0,
             message.len(),
             "Server is trying to send an empty message"
         );
-        let buffer: [u8; 8] = (message.len() as u64).to_le_bytes();
-        stream.write_all(&buffer)?;
-        stream.write_all(message)?;
-        info!(
-            "Server sent:\n{}",
-            String::from_utf8(message.to_vec()).unwrap()
-        );
+        let buffer = [
+            (message.len() as u64).to_le_bytes().to_vec(),
+            message.to_vec(),
+        ]
+        .concat();
+        stream.write_all(&buffer).await?;
         Ok(())
-    }
-}
-
-impl Drop for Server {
-    fn drop(&mut self) {
-        let mut moved = vec![];
-        std::mem::swap(&mut self.threads, &mut moved);
-        for thread in moved.into_iter() {
-            thread.join().unwrap();
-        }
     }
 }

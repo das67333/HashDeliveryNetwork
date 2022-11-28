@@ -1,4 +1,3 @@
-use log::info;
 use std::io::{prelude::*, Result};
 use std::net::{Shutdown, SocketAddr, TcpStream};
 
@@ -23,15 +22,12 @@ impl Client {
             "Client {} is trying to send an empty message",
             self.id
         );
-        let buffer: [u8; 8] = (message.len() as u64).to_le_bytes();
+        let buffer = [
+            (message.len() as u64).to_le_bytes().to_vec(),
+            message.to_vec(),
+        ]
+        .concat();
         self.stream.write_all(&buffer)?;
-        self.stream.write_all(message)?;
-        info!(
-            "Client {} sent:\n{}",
-            self.id,
-            String::from_utf8(message.to_vec()).unwrap()
-        );
-
         Ok(())
     }
 
@@ -41,15 +37,19 @@ impl Client {
         let length = u64::from_le_bytes(buffer) as usize;
         let mut message = vec![0; length];
         self.stream.read_exact(&mut message)?;
-        info!(
-            "Client {} received:\n{}",
-            self.id,
-            String::from_utf8(message.clone()).unwrap()
-        );
         Ok(message)
     }
 
-    pub fn shutdown(&mut self, how: Shutdown) {
-        let _ = self.stream.shutdown(how);
+    pub fn shutdown(&mut self) {
+        self.stream.shutdown(Shutdown::Both).ok();
+    }
+}
+
+impl Clone for Client {
+    fn clone(&self) -> Self {
+        Client {
+            id: self.id,
+            stream: self.stream.try_clone().unwrap(),
+        }
     }
 }
