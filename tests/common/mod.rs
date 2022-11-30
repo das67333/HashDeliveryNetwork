@@ -114,10 +114,9 @@ pub mod tests {
                         format!(
                             "{{\
                             \n  \"request_type\": \"store\",\
-                            \n  \"key\": \"{}\",\
-                            \n  \"hash\": \"{:0>32X}\"\
-                            \n}}",
-                            key, hash
+                            \n  \"key\": \"{key}\",\
+                            \n  \"hash\": \"{hash:0>32X}\"\
+                            \n}}"
                         )
                         .as_bytes()
                         .to_vec(),
@@ -130,19 +129,17 @@ pub mod tests {
                         format!(
                             "{{\
                             \n \"request_type\": \"load\",\
-                            \n  \"key\": \"{}\"\
+                            \n  \"key\": \"{key}\"\
                             \n}}",
-                            key
                         )
                         .as_bytes()
                         .to_vec(),
                         format!(
                             "{{\
                             \n  \"response_status\": \"success\",\
-                            \n  \"requested_key\": \"{}\",\
-                            \n  \"requested_hash\": \"{:0>32X}\"\
+                            \n  \"requested_key\": \"{key}\",\
+                            \n  \"requested_hash\": \"{hash:0>32X}\"\
                             \n}}",
-                            key, hash
                         )
                         .as_bytes()
                         .to_vec(),
@@ -162,9 +159,8 @@ pub mod tests {
                     format!(
                         "{{\
                         \n  \"request_type\": \"load\",\
-                        \n  \"key\": \"corrupted-{}\"\
+                        \n  \"key\": \"corrupted-{index}\"\
                         \n}}",
-                        index
                     )
                     .as_bytes()
                     .to_vec(),

@@ -17,15 +17,15 @@ pub struct Server {
 
 impl Server {
     /// Attempts to create a TCP server with the given address and port.
-    pub async fn start(addr: SocketAddr) -> Self {
+    pub async fn start(addr: SocketAddr) -> Result<Self> {
         let mut storage = Arc::new(Mutex::new(HashMap::new()));
-        let listener = TcpListener::bind(addr).await.unwrap();
+        let listener = TcpListener::bind(addr).await?;
         Self::log(LogEvent::ServerStart(&listener), &mut storage).await;
-        Self {
+        Ok(Self {
             listener,
             tasks: vec![],
             storage,
-        }
+        })
     }
 
     /// Starts accepting TCP connections and processing client requests.

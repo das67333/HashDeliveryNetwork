@@ -1,6 +1,6 @@
 mod common;
 use common::tests::{Client, IpVersion, ServerWrapper};
-use serial_test::parallel;
+use serial_test::serial;
 use std::collections::HashMap;
 
 fn are_json_equal(data1: &[u8], data2: &[u8]) -> bool {
@@ -12,27 +12,15 @@ fn are_json_equal(data1: &[u8], data2: &[u8]) -> bool {
 }
 
 #[test]
-#[parallel]
-fn test_ddos() {
+#[serial]
+fn test_start() {
     let server = ServerWrapper::start(IpVersion::V4).unwrap();
-
-    let n = 100;
-    let mut clients: Vec<Client> = (0..n)
-        .filter_map(|i| Client::start(i, server.addr).ok())
-        .collect();
-    for client in clients.iter_mut() {
-        let _greeting = client.read().unwrap();
-        let message = format!("client {}: corrupted json", client.id);
-        client.write(message.as_bytes()).unwrap();
-    }
-    for client in clients.iter_mut() {
-        client.shutdown();
-    }
+    drop(server);
 }
 
 #[test]
-#[parallel]
-fn test_store_and_load() {
+#[serial]
+fn test_responds() {
     let server = ServerWrapper::start(IpVersion::V4).unwrap();
 
     let mut client = Client::start(0, server.addr).unwrap();

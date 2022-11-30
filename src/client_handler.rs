@@ -102,10 +102,9 @@ impl Server {
             Respond::LoadSuccess(key, hash) => format!(
                 "{{\
                 \n  \"response_status\": \"success\",\
-                \n  \"requested_key\": \"{}\",\
-                \n  \"requested_hash\": \"{}\"\
-                \n}}",
-                key, hash
+                \n  \"requested_key\": \"{key}\",\
+                \n  \"requested_hash\": \"{hash}\"\
+                \n}}"
             )
             .as_bytes()
             .to_vec(),
