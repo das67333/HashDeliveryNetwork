@@ -2,8 +2,8 @@
 pub mod tests {
     use rand::Rng;
     use std::{
-        io::Result,
-        net::{IpAddr, SocketAddr, TcpListener},
+        io::{BufRead, BufReader, Result, Write},
+        net::{IpAddr, Shutdown, SocketAddr, TcpListener, TcpStream},
         process::{Child, Command},
         str::FromStr,
         thread, time,
@@ -58,6 +58,44 @@ pub mod tests {
     impl Drop for ServerWrapper {
         fn drop(&mut self) {
             self.stop().ok();
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Client {
+        pub id: u64,
+        stream: TcpStream,
+    }
+
+    impl Client {
+        pub fn start(id: u64, server_addr: SocketAddr) -> Result<Self> {
+            Ok(Self {
+                id,
+                stream: TcpStream::connect(server_addr)?,
+            })
+        }
+
+        pub fn write(&mut self, message: &[u8]) -> Result<()> {
+            self.stream.write_all(message)
+        }
+
+        pub fn read(&mut self) -> Result<Vec<u8>> {
+            let mut buffer = vec![];
+            BufReader::new(&mut self.stream).read_until(b'}', &mut buffer)?;
+            Ok(buffer)
+        }
+
+        pub fn shutdown(&mut self) {
+            self.stream.shutdown(Shutdown::Both).ok();
+        }
+    }
+
+    impl Clone for Client {
+        fn clone(&self) -> Self {
+            Client {
+                id: self.id,
+                stream: self.stream.try_clone().unwrap(),
+            }
         }
     }
 

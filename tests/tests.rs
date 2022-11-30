@@ -1,6 +1,5 @@
 mod common;
-use common::tests::{IpVersion, ServerWrapper};
-use hash_delivery_network::client::Client;
+use common::tests::{Client, IpVersion, ServerWrapper};
 use serial_test::parallel;
 use std::collections::HashMap;
 

@@ -1,6 +1,5 @@
 mod common;
-use common::tests::{gen_requests_failed_load, gen_requests_set, IpVersion, ServerWrapper};
-use hash_delivery_network::client::Client;
+use common::tests::{gen_requests_failed_load, gen_requests_set, Client, IpVersion, ServerWrapper};
 use serial_test::serial;
 use std::{thread::JoinHandle, time::Instant};
 
