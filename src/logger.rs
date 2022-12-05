@@ -11,22 +11,21 @@ impl Server {
         if std::env::var("DISABLE_LOGS").is_ok() {
             return;
         }
-    
+
         use chrono::prelude::*;
-        
+
         let log_message = format!(
             "[{}]    Storage size: {}. {}",
             Local::now().format("%d/%b/%Y:%H:%M:%S %z"),
             storage.lock().await.len(),
             match event {
-                LogEvent::ServerStart(listener) => {
+                LogEvent::ServerStart(listener) =>
                     if let Ok(addr) = listener.local_addr() {
-                        format!("Server was started with address: {addr}.",)
+                        format!("Server started with address: {addr}.",)
                     } else {
                         return;
-                    }
-                }
-                LogEvent::NewRequest(request, client) => {
+                    },
+                LogEvent::NewRequest(client, request) =>
                     if let Ok(addr) = client.peer_addr() {
                         match &request {
                         Request::Store(key, value) => format!(
@@ -34,17 +33,19 @@ impl Server {
                         ),
                         Request::Load(key) =>
                             format!("Client address: {addr}. Received request to get value by key \"{key}\"."),
+                        Request::Invalid(err) =>
+                            format!("Client address: {addr}. Received invalid request: \"{err}\".")
                         }
                     } else {
                         return;
-                    }
-                }
+                    },
                 LogEvent::NewConnection(client) =>
                     if let Ok(addr) = client.peer_addr() {
                         format!("Client address: {addr}. Connection established.")
                     } else {
                         return;
                     },
+                LogEvent::Disconnected => "Terminated connection with a client.".to_owned(),
             }
         );
         eprintln!("{log_message}");
@@ -54,6 +55,7 @@ impl Server {
 /// Implements server events to logged.
 pub enum LogEvent<'a> {
     ServerStart(&'a TcpListener),
-    NewRequest(&'a Request, &'a TcpStream),
+    NewRequest(&'a TcpStream, &'a Request),
     NewConnection(&'a TcpStream),
+    Disconnected,
 }
