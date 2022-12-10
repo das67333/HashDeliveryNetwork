@@ -29,7 +29,7 @@ fn test_responds() {
     {
         assert!(are_json_equal(
             b"{\
-            \n  \"student_name\": \"das67333\"\
+            \n\t\"student_name\": \"das67333\"\
             \n}",
             &client.read().unwrap()
         ));
@@ -37,13 +37,13 @@ fn test_responds() {
     // test failed load
     {
         let message = b"{\
-        \n  \"request_type\": \"load\",\
-        \n  \"key\": \"some_key\"\
+        \n\t\"request_type\": \"load\",\
+        \n\t\"key\": \"some_key\"\
         \n}";
         client.write(message).unwrap();
         assert!(are_json_equal(
             b"{\
-            \n  \"response_status\": \"key not found\"\
+            \n\t\"response_status\": \"key not found\"\
             \n}",
             &client.read().unwrap()
         ));
@@ -51,14 +51,14 @@ fn test_responds() {
     // test store
     {
         let message = b"{\
-        \n  \"request_type\": \"store\",\
-        \n  \"key\": \"some_key\",\
-        \n  \"hash\": \"0b672dd94fd3da6a8d404b66ee3f0c83\"\
+        \n\t\"request_type\": \"store\",\
+        \n\t\"key\": \"some_key\",\
+        \n\t\"hash\": \"0b672dd94fd3da6a8d404b66ee3f0c83\"\
         \n}";
         client.write(message).unwrap();
         assert!(are_json_equal(
             b"{\
-            \n  \"response_status\": \"success\"\
+            \n\t\"response_status\": \"success\"\
             \n}",
             &client.read().unwrap()
         ));
@@ -66,15 +66,15 @@ fn test_responds() {
     // test successful load
     {
         let message = b"{\
-                                \n  \"request_type\": \"load\",\
-                                \n  \"key\": \"some_key\"\
+                                \n\t\"request_type\": \"load\",\
+                                \n\t\"key\": \"some_key\"\
                                 \n}";
         client.write(message).unwrap();
         assert!(are_json_equal(
             b"{\
-            \n  \"response_status\": \"success\",\
-            \n  \"requested_key\": \"some_key\",\
-            \n  \"requested_hash\": \"0b672dd94fd3da6a8d404b66ee3f0c83\"\
+            \n\t\"response_status\": \"success\",\
+            \n\t\"requested_key\": \"some_key\",\
+            \n\t\"requested_hash\": \"0b672dd94fd3da6a8d404b66ee3f0c83\"\
             \n}",
             &client.read().unwrap()
         ));

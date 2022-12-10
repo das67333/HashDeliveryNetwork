@@ -94,30 +94,30 @@ impl Server {
         match respond {
             Respond::StoreSuccess => {
                 b"{\
-                \n  \"response_status\": \"success\"\
+                \n\t\"response_status\": \"success\"\
                 \n}"
             }
             .to_vec(),
             Respond::LoadSuccess(key, hash) => format!(
                 "{{\
-                \n  \"response_status\": \"success\",\
-                \n  \"requested_key\": \"{key}\",\
-                \n  \"requested_hash\": \"{hash}\"\
+                \n\t\"response_status\": \"success\",\
+                \n\t\"requested_key\": \"{key}\",\
+                \n\t\"requested_hash\": \"{hash}\"\
                 \n}}"
             )
             .as_bytes()
             .to_vec(),
             Respond::LoadKeyNotFound => {
                 b"{\
-                \n  \"response_status\": \"key not found\"\
+                \n\t\"response_status\": \"key not found\"\
                 \n}"
             }
             .to_vec(),
             Respond::InvalidRequest(err) => {
                 format!(
                     "{{\
-                    \n  \"response_status\": \"invalid request\",\
-                    \n  \"error\": \"{err}\"
+                    \n\t\"response_status\": \"invalid request\",\
+                    \n\t\"error\": \"{err}\"
                     \n}}",
                 )
             }
@@ -149,7 +149,7 @@ impl Server {
         Self::write(
             client,
             b"{\
-                    \n  \"student_name\": \"das67333\"\
+                    \n\t\"student_name\": \"das67333\"\
                     \n}",
         )
         .await

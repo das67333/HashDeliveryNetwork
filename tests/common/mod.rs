@@ -113,15 +113,15 @@ pub mod tests {
                     (
                         format!(
                             "{{\
-                            \n  \"request_type\": \"store\",\
-                            \n  \"key\": \"{key}\",\
-                            \n  \"hash\": \"{hash:0>32X}\"\
+                            \n\t\"request_type\": \"store\",\
+                            \n\t\"key\": \"{key}\",\
+                            \n\t\"hash\": \"{hash:0>32X}\"\
                             \n}}"
                         )
                         .as_bytes()
                         .to_vec(),
                         b"{\
-                        \n  \"response_status\": \"success\"\
+                        \n\t\"response_status\": \"success\"\
                         \n}"
                         .to_vec(),
                     ),
@@ -129,16 +129,16 @@ pub mod tests {
                         format!(
                             "{{\
                             \n \"request_type\": \"load\",\
-                            \n  \"key\": \"{key}\"\
+                            \n\t\"key\": \"{key}\"\
                             \n}}",
                         )
                         .as_bytes()
                         .to_vec(),
                         format!(
                             "{{\
-                            \n  \"response_status\": \"success\",\
-                            \n  \"requested_key\": \"{key}\",\
-                            \n  \"requested_hash\": \"{hash:0>32X}\"\
+                            \n\t\"response_status\": \"success\",\
+                            \n\t\"requested_key\": \"{key}\",\
+                            \n\t\"requested_hash\": \"{hash:0>32X}\"\
                             \n}}",
                         )
                         .as_bytes()
@@ -158,14 +158,14 @@ pub mod tests {
                 (
                     format!(
                         "{{\
-                        \n  \"request_type\": \"load\",\
-                        \n  \"key\": \"corrupted-{index}\"\
+                        \n\t\"request_type\": \"load\",\
+                        \n\t\"key\": \"corrupted-{index}\"\
                         \n}}",
                     )
                     .as_bytes()
                     .to_vec(),
                     b"{\
-                    \n  \"response_status\": \"key not found\"\
+                    \n\t\"response_status\": \"key not found\"\
                     \n}"
                     .to_vec(),
                 )
