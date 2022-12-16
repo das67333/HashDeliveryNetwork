@@ -7,6 +7,6 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = ClArgs::parse();
-    Server::start(args.get_addr()?).await?.run().await?;
+    Server::new(args.get_addr()?).await?.run().await?;
     Ok(())
 }

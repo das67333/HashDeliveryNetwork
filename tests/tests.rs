@@ -1,7 +1,7 @@
 mod common;
 use common::tests::{Client, IpVersion, ServerWrapper};
 use serial_test::serial;
-use std::collections::HashMap;
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 fn are_json_equal(data1: &[u8], data2: &[u8]) -> bool {
     let map1: HashMap<String, String> =
@@ -13,14 +13,7 @@ fn are_json_equal(data1: &[u8], data2: &[u8]) -> bool {
 
 #[test]
 #[serial]
-fn test_start() {
-    let server = ServerWrapper::start(IpVersion::V4).unwrap();
-    drop(server);
-}
-
-#[test]
-#[serial]
-fn test_responds() {
+fn test_load_and_store() {
     let server = ServerWrapper::start(IpVersion::V4).unwrap();
 
     let mut client = Client::start(0, server.addr).unwrap();
@@ -66,9 +59,9 @@ fn test_responds() {
     // test successful load
     {
         let message = b"{\
-                                \n\t\"request_type\": \"load\",\
-                                \n\t\"key\": \"some_key\"\
-                                \n}";
+        \n\t\"request_type\": \"load\",\
+        \n\t\"key\": \"some_key\"\
+        \n}";
         client.write(message).unwrap();
         assert!(are_json_equal(
             b"{\
@@ -80,4 +73,23 @@ fn test_responds() {
         ));
     }
     client.shutdown();
+    sleep(Duration::from_millis(10));
+}
+
+#[test]
+#[serial]
+fn test_shutdown() {
+    let mut server = ServerWrapper::start(IpVersion::V4).unwrap();
+
+    let mut client = Client::start(0, server.addr).unwrap();
+
+    // greeting
+    client.read().unwrap();
+
+    let message = b"{\
+    \n\t\"request_type\": \"shutdown\"\
+    \n}";
+    client.write(message).unwrap();
+    sleep(Duration::from_millis(10));
+    assert!(!server.is_alive());
 }

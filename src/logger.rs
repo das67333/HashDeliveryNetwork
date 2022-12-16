@@ -1,5 +1,9 @@
 use crate::{client_handler::Request, server::Server};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    io::{stderr, Write},
+    sync::Arc,
+};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::Mutex,
@@ -33,8 +37,9 @@ impl Server {
                         ),
                         Request::Load(key) =>
                             format!("Client address: {addr}. Received request to get value by key \"{key}\"."),
+                        Request::Shutdown => format!("Client address: {addr}. Received request to shutdown."),
                         Request::Invalid(err) =>
-                            format!("Client address: {addr}. Received invalid request: \"{err}\".")
+                            format!("Client address: {addr}. Received invalid request: \"{err}\"."),
                         }
                     } else {
                         return;
@@ -49,6 +54,7 @@ impl Server {
             }
         );
         eprintln!("{log_message}");
+        stderr().flush().ok();
     }
 }
 

@@ -8,7 +8,7 @@ use tokio::{
 
 impl Server {
     /// Processes client requests until the connection is terminated.
-    pub async fn client_handler(
+    pub async fn request_handler(
         mut client: TcpStream,
         mut storage: Arc<Mutex<HashMap<String, String>>>,
     ) {
@@ -26,6 +26,7 @@ impl Server {
         storage: &mut Arc<Mutex<HashMap<String, String>>>,
     ) -> Result<()> {
         let request_json = Self::read(client).await?;
+        // eprintln!("{:?}", request_json);
         let request = Self::deserialize_request(&request_json);
         let is_invalid = matches!(request, Request::Invalid(_));
         Self::log(LogEvent::NewRequest(client, &request), storage).await;
@@ -56,26 +57,40 @@ impl Server {
             }
         };
 
-        let key = match request.get("key") {
-            Some(val) => val,
-            None => {
-                return Err(Error::new(
-                    ErrorKind::InvalidData,
-                    "Request doesn't contain \"key\" field",
-                ))
-            }
-        }
-        .to_owned();
-
         match request_type {
             "store" => match request.get("hash") {
-                Some(hash) => Ok(Request::Store(key, hash.to_owned())),
+                Some(hash) => {
+                    let key = match request.get("key") {
+                        Some(val) => val,
+                        None => {
+                            return Err(Error::new(
+                                ErrorKind::InvalidData,
+                                "Request doesn't contain \"key\" field",
+                            ))
+                        }
+                    }
+                    .to_owned();
+                    Ok(Request::Store(key, hash.to_owned()))
+                }
                 None => Err(Error::new(
                     ErrorKind::InvalidData,
                     "Store request doesn't contain hash field",
                 )),
             },
-            "load" => Ok(Request::Load(key)),
+            "load" => {
+                let key = match request.get("key") {
+                    Some(val) => val,
+                    None => {
+                        return Err(Error::new(
+                            ErrorKind::InvalidData,
+                            "Request doesn't contain \"key\" field",
+                        ))
+                    }
+                }
+                .to_owned();
+                Ok(Request::Load(key))
+            }
+            "shutdown" => Ok(Request::Shutdown),
             _ => Err(Error::new(
                 ErrorKind::Unsupported,
                 "Unsupported request type",
@@ -141,6 +156,9 @@ impl Server {
                 Some(hash) => Respond::LoadSuccess(key, hash.to_owned()),
                 None => Respond::LoadKeyNotFound,
             },
+            Request::Shutdown => {
+                std::process::exit(0);
+            }
             Request::Invalid(err) => Respond::InvalidRequest(err.to_string()),
         }
     }
@@ -162,6 +180,7 @@ pub enum Request {
     Store(String, String),
     /// Stores key
     Load(String),
+    Shutdown,
     /// Stores the error that occurred
     Invalid(Error),
 }

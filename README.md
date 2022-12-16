@@ -21,3 +21,7 @@
     "request_type": "load",
     "key": "SOME_KEY"
 }  
+
+{
+    "request_type: "shutdown"
+}
