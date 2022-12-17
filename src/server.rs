@@ -58,13 +58,3 @@ impl Server {
         stream.write_all(buffer)
     }
 }
-
-impl Drop for Server {
-    fn drop(&mut self) {
-        let mut tasks = vec![];
-        std::mem::swap(&mut tasks, &mut self.request_handles);
-        for task in tasks.into_iter() {
-            task.join().ok();
-        }
-    }
-}
