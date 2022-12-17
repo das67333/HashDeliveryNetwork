@@ -2,16 +2,13 @@ use crate::{client_handler::Request, server::Server};
 use std::{
     collections::HashMap,
     io::{stderr, Write},
-    sync::Arc,
-};
-use tokio::{
     net::{TcpListener, TcpStream},
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 impl Server {
     /// Creates a log message and writes it to stderr.
-    pub async fn log<'a>(event: LogEvent<'a>, storage: &mut Arc<Mutex<HashMap<String, String>>>) {
+    pub fn log(event: LogEvent, storage: &mut Arc<Mutex<HashMap<String, String>>>) {
         if std::env::var("DISABLE_LOGS").is_ok() {
             return;
         }
@@ -21,7 +18,7 @@ impl Server {
         let log_message = format!(
             "[{}]    Storage size: {}. {}",
             Local::now().format("%d/%b/%Y:%H:%M:%S %z"),
-            storage.lock().await.len(),
+            storage.lock().unwrap().len(),
             match event {
                 LogEvent::ServerStart(listener) =>
                     if let Ok(addr) = listener.local_addr() {

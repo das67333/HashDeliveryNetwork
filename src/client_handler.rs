@@ -1,38 +1,35 @@
 use crate::{logger::LogEvent, server::Server};
-use std::{collections::HashMap, sync::Arc};
-use tokio::{
+use std::{
+    collections::HashMap,
     io::{Error, ErrorKind, Result},
     net::TcpStream,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 impl Server {
     /// Processes client requests until the connection is terminated.
-    pub async fn request_handler(
+    pub fn request_handler(
         mut client: TcpStream,
         mut storage: Arc<Mutex<HashMap<String, String>>>,
     ) {
-        Self::log(LogEvent::NewConnection(&client), &mut storage).await;
-        Self::greet(&mut client).await.ok();
-        while Self::accept_request(&mut client, &mut storage)
-            .await
-            .is_ok()
-        {}
-        Self::log(LogEvent::Disconnected, &mut storage).await;
+        Self::log(LogEvent::NewConnection(&client), &mut storage);
+        Self::greet(&mut client).ok();
+        while Self::accept_request(&mut client, &mut storage).is_ok() {}
+        Self::log(LogEvent::Disconnected, &mut storage);
     }
 
-    async fn accept_request(
+    fn accept_request(
         client: &mut TcpStream,
         storage: &mut Arc<Mutex<HashMap<String, String>>>,
     ) -> Result<()> {
-        let request_json = Self::read(client).await?;
+        let request_json = Self::read(client)?;
         // eprintln!("{:?}", request_json);
         let request = Self::deserialize_request(&request_json);
         let is_invalid = matches!(request, Request::Invalid(_));
-        Self::log(LogEvent::NewRequest(client, &request), storage).await;
-        let respond = Self::respond(request, storage).await;
+        Self::log(LogEvent::NewRequest(client, &request), storage);
+        let respond = Self::respond(request, storage);
         let respond_json = Self::serialize_respond(respond);
-        Self::write(client, &respond_json).await?;
+        Self::write(client, &respond_json)?;
         if is_invalid {
             Err(Error::new(ErrorKind::InvalidData, "Invalid request"))
         } else {
@@ -141,18 +138,15 @@ impl Server {
         }
     }
 
-    async fn respond(
-        request: Request,
-        storage: &mut Arc<Mutex<HashMap<String, String>>>,
-    ) -> Respond {
+    fn respond(request: Request, storage: &mut Arc<Mutex<HashMap<String, String>>>) -> Respond {
         match request {
             Request::Store(key, hash) => {
                 {
-                    storage.lock().await.insert(key, hash);
+                    storage.lock().unwrap().insert(key, hash);
                 };
                 Respond::StoreSuccess
             }
-            Request::Load(key) => match { storage.lock().await.get(&key) } {
+            Request::Load(key) => match { storage.lock().unwrap().get(&key) } {
                 Some(hash) => Respond::LoadSuccess(key, hash.to_owned()),
                 None => Respond::LoadKeyNotFound,
             },
@@ -163,14 +157,13 @@ impl Server {
         }
     }
 
-    async fn greet(client: &mut TcpStream) -> Result<()> {
+    fn greet(client: &mut TcpStream) -> Result<()> {
         Self::write(
             client,
             b"{\
                     \n\t\"student_name\": \"das67333\"\
                     \n}",
         )
-        .await
     }
 }
 
